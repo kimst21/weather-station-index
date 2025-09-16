@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<!-- 
+    HTML5 문서 타입 선언 
+    - 브라우저에게 최신 HTML 표준을 사용하도록 지시
+    - 쿼크 모드(Quirks Mode)를 방지하여 일관된 렌더링 보장
+-->
+<html lang="ko">
+<!-- 
+    HTML 루트 요소 시작, 한국어 페이지임을 명시
+    - lang="ko": 스크린 리더와 검색엔진에 언어 정보 제공
+    - SEO 최적화와 접근성 향상에 도움
+-->
+<head>
+    <!-- ========== HEAD 섹션 시작 - 페이지 메타데이터 및 리소스 정의 ========== -->
+    
+    <!-- 문자 인코딩 설정 -->
+    <meta charset="UTF-8">
+    <!-- 
+        UTF-8 인코딩 사용으로 한글 및 다국어 지원
+        반드시 head 태그 최상단에 위치해야 함
+    -->
+    
+    <!-- 페이지 제목 설정 -->
+    <title>ESP32 Weather Station</title>
+    <!-- 
+        브라우저 탭에 표시되는 제목
+        검색엔진 결과와 북마크에서도 사용됨
+    -->
+    
+    <!-- 반응형 웹 디자인을 위한 뷰포트 설정 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 
+        width=device-width: 화면 너비를 기기의 실제 너비로 설정
+        initial-scale=1.0: 초기 줌 레벨을 100%로 설정
+        모바일 기기에서 올바른 크기로 표시되도록 함
+    -->
+    
+    <!-- 빈 파비콘 설정으로 404 에러 방지 -->
+    <link rel="icon" href="data:,">
+    <!-- 
+        data: URL을 사용하여 빈 아이콘 제공
+        서버에 favicon.ico 파일이 없어도 404 에러 발생하지 않음
+    -->
+    
+    <!-- ========== CSS 스타일 정의 시작 ========== -->
+    <style>
+        /* 
+            CSS 초기화 - 브라우저 기본 스타일 제거
+            모든 브라우저에서 일관된 렌더링을 위한 리셋
+        */
+        * {
+            margin: 0;          /* 기본 여백 제거 */
+            padding: 0;         /* 기본 안쪽 여백 제거 */
+            box-sizing: border-box;  /* 패딩과 테두리를 너비에 포함 */
+        }
+        
+        /* 
+            body 스타일 - 페이지 전체 배경과 기본 레이아웃
+        */
+        body {
+            /* 웹 안전 폰트 스택 - 시스템별 최적 폰트 사용 */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* 대각선 그라디언트 배경 - 보라색에서 자주색으로 변화 */
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;  /* 최소 높이를 화면 높이로 설정 */
+            padding: 20px;      /* 전체 페이지 여백 */
+        }
+        
+        /* 
+            메인 컨테이너 - 콘텐츠를 담는 중앙 정렬 박스
+        */
+        .container {
+            max-width: 1200px;     /* 최대 너비 제한으로 가독성 향상 */
+            margin: 0 auto;        /* 좌우 중앙 정렬 */
+            /* 반투명 흰색 배경으로 콘텐츠와 배경 분리 */
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;   /* 둥근 모서리로 현대적인 느낌 */
+            /* 그림자 효과로 깊이감 표현 */
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;      /* 둥근 모서리 밖의 내용 숨김 */
+        }
+        
+        /* 
+            헤더 스타일 - 제목과 시간 정보 영역
+        */
+        .header {
+            /* 수평 그라디언트 배경 - 파란색 계열 */
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            color: white;          /* 흰색 텍스트로 대비 확보 */
+            text-align: center;    /* 텍스트 중앙 정렬 */
+            padding: 30px 20px;    /* 충분한 여백으로 시각적 여유 제공 */
+        }
+        
+        /* 
+            메인 제목 스타일
+        */
+        .header h1 {
+            font-size: 2.5em;     /* 큰 글씨로 주목도 향상 */
+            margin-bottom: 10px;   /* 아래쪽 여백 */
+            /* 텍스트 그림자로 입체감 표현 */
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        /* 
+            업데이트 시간 표시 스타일
+        */
+        .update-time {
+            font-size: 1.1em;     /* 약간 큰 글씨 */
+            opacity: 0.9;         /* 투명도로 부차적 정보임을 표현 */
+        }
+        
+        /* 
+            센서 그리드 레이아웃 - CSS Grid를 활용한 반응형 배치
+        */
+        .sensors-grid {
+            display: grid;
+            /* 
+                auto-fit: 공간에 따라 자동으로 열 개수 조정
+                minmax(300px, 1fr): 최소 300px, 최대 균등 분할
+                반응형 레이아웃의 핵심
+            */
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;            /* 그리드 아이템 간 간격 */
+            padding: 30px;        /* 그리드 컨테이너 내부 여백 */
+        }
+        
+        /* 
+            개별 센서 그룹 카드 스타일
+        */
+        .sensor-group {
+            background: white;     /* 깔끔한 흰색 배경 */
+            border-radius: 15px;   /* 둥근 모서리 */
+            padding: 25px;         /* 카드 내부 여백 */
+            /* 그림자로 카드의 떠있는 느낌 연출 */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            /* 호버 애니메이션을 위한 transition 설정 */
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        /* 
+            센서 카드 호버 효과 - 마우스 오버 시 상호작용
+        */
+        .sensor-group:hover {
+            /* 위로 살짝 올라가는 효과 */
+            transform: translateY(-5px);
+            /* 그림자 강화로 떠있는 느낌 증대 */
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        /* 
+            센서 헤더 - 아이콘과 이름을 담는 영역
+        */
+        .sensor-header {
+            display: flex;         /* 플렉스 박스로 가로 배치 */
+            align-items: center;   /* 세로 중앙 정렬 */
+            margin-bottom: 20px;   /* 하단 여백 */
+        }
+        
+        /* 
+            센서 아이콘 스타일 - 각 센서를 구별하는 시각적 요소
+        */
+        .sensor-icon {
+            width: 50px;           /* 고정 너비 */
+            height: 50px;          /* 고정 높이 */
+            border-radius: 12px;   /* 둥근 모서리 */
+            display: flex;         /* 플렉스 박스 */
+            align-items: center;   /* 세로 중앙 정렬 */
+            justify-content: center; /* 가로 중앙 정렬 */
+            margin-right: 15px;    /* 오른쪽 여백 */
+            font-size: 24px;       /* 이모지 크기 */
+        }
+        
+        /* 각 센서별 아이콘 색상 테마 - 시각적 구분을 위한 그라디언트 */
+        .dht-icon { 
+            /* DHT22 센서 - 빨간색/주황색 (온도 연상) */
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24); 
+        }
+        .bme-icon { 
+            /* BME280 센서 - 보라색/파란색 (기압 연상) */
+            background: linear-gradient(45deg, #4834d4, #686de0); 
+        }
+        .pot-icon { 
+            /* POT 센서 - 초록색 (가변 조절 연상) */
+            background: linear-gradient(45deg, #26de81, #20bf6b); 
+        }
+        .light-icon { 
+            /* BH1750 센서 - 노란색 (빛 연상) */
+            background: linear-gradient(45deg, #fed330, #f7b731); 
+        }
+        
+        /* 
+            센서 이름 텍스트 스타일
+        */
+        .sensor-name {
+            font-size: 1.4em;     /* 적당한 크기 */
+            font-weight: 600;      /* 중간 굵기 */
+            color: #2c3e50;        /* 어두운 회색 */
+        }
+        
+        /* 
+            센서 데이터 목록 레이아웃
+        */
+        .readings {
+            display: grid;         /* 그리드 레이아웃 */
+            gap: 15px;            /* 아이템 간 간격 */
+        }
+        
+        /* 
+            개별 센서 데이터 항목 스타일
+        */
+        .reading-item {
+            display: flex;                    /* 플렉스 박스 */
+            justify-content: space-between;   /* 양 끝 정렬 (라벨-값 분리) */
+            align-items: center;              /* 세로 중앙 정렬 */
+            padding: 12px 15px;               /* 내부 여백 */
+            background: #f8f9fa;              /* 연한 회색 배경 */
+            border-radius: 10px;              /* 둥근 모서리 */
+            border-left: 4px solid #3498db;   /* 왼쪽 컬러 바 - 시각적 포인트 */
+        }
+        
+        /* 
+            센서 데이터 라벨 (측정 항목명) 스타일
+        */
+        .reading-label {
+            font-weight: 500;      /* 중간 굵기 */
+            color: #555;          /* 중간 회색 */
+        }
+        
+        /* 
+            센서 데이터 값 스타일
+        */
+        .reading-value {
+            font-size: 1.2em;                    /* 약간 큰 글씨 */
+            font-weight: bold;                    /* 굵은 글씨 */
+            color: #2c3e50;                       /* 어두운 회색 */
+            font-family: 'Courier New', monospace; /* 고정폭 폰트로 숫자 정렬 */
+        }
+        
+        /* 상태 표시기 관련 스타일 (현재는 제거되었지만 참고용으로 남겨둠) */
+        .status-indicator {
+            position: fixed;       /* 고정 위치 */
+            top: 20px;            /* 상단에서 20px */
+            right: 20px;          /* 우측에서 20px */
+            padding: 10px 20px;   /* 내부 여백 */
+            background: #27ae60;  /* 초록색 배경 */
+            color: white;         /* 흰색 텍스트 */
+            border-radius: 25px;  /* 둥근 알약 모양 */
+            font-weight: 500;     /* 중간 굵기 */
+            box-shadow: 0 4px 15px rgba(39,174,96,0.3); /* 그림자 */
+            z-index: 1000;        /* 최상단 레이어 */
+        }
+        
+        /* 로딩과 에러 상태 색상 */
+        .loading {
+            color: #e74c3c;       /* 빨간색 텍스트 */
+            background: #e74c3c;  /* 빨간색 배경 */
+        }
+        
+        .error {
+            color: #e74c3c;       /* 빨간색 텍스트 */
+            background: #e74c3c;  /* 빨간색 배경 */
+        }
+        
+        /* 
+            반응형 디자인 - 모바일 기기 대응
+            768px 이하 화면에서 적용되는 스타일
+        */
+        @media (max-width: 768px) {
+            .header h1 { 
+                font-size: 2em;   /* 제목 크기 축소 */
+            }
+            .sensors-grid { 
+                grid-template-columns: 1fr;  /* 한 열로 배치 */
+                padding: 20px;              /* 패딩 축소 */
+            }
+            .sensor-group { 
+                padding: 20px;              /* 카드 패딩 축소 */
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- ========== BODY 섹션 시작 - 실제 콘텐츠 영역 ========== -->
+    
+    <!-- 메인 컨테이너 시작 -->
+    <div class="container">
+        
+        <!-- ========== 헤더 영역 - 제목과 시간 표시 ========== -->
+        <div class="header">
+            <!-- 메인 제목 with 이모지로 시각적 재미 추가 -->
+            <h1>🌤️ ESP32 Weather Station</h1>
+            
+            <!-- 마지막 업데이트 시간 표시 영역 -->
+            <div class="update-time">
+                <!-- 
+                    JavaScript에서 실시간으로 업데이트되는 시간 정보
+                    currentTime이라는 ID를 가진 span 요소가 업데이트 대상
+                -->
+                마지막 업데이트: <span id="currentTime">--:--:--</span>
+            </div>
+        </div>
+        
+        <!-- ========== 센서 데이터 그리드 영역 ========== -->
+        <div class="sensors-grid">
+            
+            <!-- DHT22 센서 그룹 카드 -->
+            <div class="sensor-group">
+                <!-- 센서 헤더: 아이콘 + 이름 -->
+                <div class="sensor-header">
+                    <!-- 온도계 이모지와 그라디언트 배경 -->
+                    <div class="sensor-icon dht-icon">🌡️</div>
+                    <div class="sensor-name">DHT22 센서</div>
+                </div>
+                
+                <!-- DHT22 센서의 측정값들 -->
+                <div class="readings">
+                    <!-- 섭씨 온도 -->
+                    <div class="reading-item">
+                        <span class="reading-label">온도 (°C)</span>
+                        <span class="reading-value">
+                            <!-- 
+                                class="reading": JavaScript에서 찾아서 업데이트할 요소
+                                XML 응답의 첫 번째 <reading> 태그 값으로 업데이트됨
+                            -->
+                            <span class="reading">--</span>°C
+                        </span>
+                    </div>
+                    
+                    <!-- 화씨 온도 -->
+                    <div class="reading-item">
+                        <span class="reading-label">온도 (°F)</span>
+                        <span class="reading-value">
+                            <!-- XML 응답의 두 번째 <reading> 태그 값 -->
+                            <span class="reading">--</span>°F
+                        </span>
+                    </div>
+                    
+                    <!-- 습도 -->
+                    <div class="reading-item">
+                        <span class="reading-label">습도</span>
+                        <span class="reading-value">
+                            <!-- XML 응답의 세 번째 <reading> 태그 값 -->
+                            <span class="reading">--</span>%
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- BME280 센서 그룹 카드 -->
+            <div class="sensor-group">
+                <div class="sensor-header">
+                    <!-- 토네이도 이모지로 기압 센서 표현 -->
+                    <div class="sensor-icon bme-icon">🌪️</div>
+                    <div class="sensor-name">BME280 센서</div>
+                </div>
+                
+                <!-- BME280 센서의 측정값들 -->
+                <div class="readings">
+                    <!-- BME280 섭씨 온도 -->
+                    <div class="reading-item">
+                        <span class="reading-label">온도 (°C)</span>
+                        <span class="reading-value">
+                            <!-- XML 응답의 네 번째 <reading> 태그 값 -->
+                            <span class="reading">--</span>°C
+                        </span>
+                    </div>
+                    
+                    <!-- BME280 화씨 온도 -->
+                    <div class="reading-item">
+                        <span class="reading-label">온도 (°F)</span>
+                        <span class="reading-value">
+                            <!-- XML 응답의 다섯 번째 <reading> 태그 값 -->
+                            <span class="reading">--</span>°F
+                        </span>
+                    </div>
+                    
+                    <!-- 기압 -->
+                    <div class="reading-item">
+                        <span class="reading-label">기압</span>
+                        <span class="reading-value">
+                            <!-- XML 응답의 여섯 번째 <reading> 태그 값 -->
+                            <span class="reading">--</span> Pa
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 기타 센서 그룹 카드 (POT 센서) -->
+            <div class="sensor-group">
+                <div class="sensor-header">
+                    <!-- 슬라이더 이모지로 가변저항 표현 -->
+                    <div class="sensor-icon pot-icon">🎚️</div>
+                    <div class="sensor-name">TRIMMER 센서</div>
+                </div>
+                
+                <!-- POT 센서 측정값 -->
+                <div class="readings">
+                    <!-- 가변저항 위치값 -->
+                    <div class="reading-item">
+                        <span class="reading-label">POT 위치</span>
+                        <span class="reading-value">
+                            <!-- 
+                                XML 응답의 일곱 번째 <reading> 태그 값
+                                0~4095 범위의 아날로그 값
+                            -->
+                            <span class="reading">--</span>/4095
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- BH1750 조도 센서 그룹 카드 -->
+            <div class="sensor-group">
+                <div class="sensor-header">
+                    <!-- 전구 이모지로 조도 센서 표현 -->
+                    <div class="sensor-icon light-icon">💡</div>
+                    <div class="sensor-name">BH1750 센서</div>
+                </div>
+                
+                <!-- BH1750 센서 측정값 -->
+                <div class="readings">
+                    <!-- 조도값 -->
+                    <div class="reading-item">
+                        <span class="reading-label">조도</span>
+                        <span class="reading-value">
+                            <!-- 
+                                XML 응답의 여덟 번째 <reading> 태그 값
+                                lux 단위의 조도 측정값
+                            -->
+                            <span class="reading">--</span> lux
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+        </div> <!-- sensors-grid 끝 -->
+    </div> <!-- container 끝 -->
+
+    <!-- ========== JavaScript 코드 시작 - 동적 기능 구현 ========== -->
+    <script>
+        /* 
+         * DisplayCurrentTime() 함수
+         * 역할: 현재 시간을 포맷팅하여 화면에 표시
+         * 호출: 페이지 로드 시, 데이터 업데이트 시, 1초마다 자동
+         */
+        function DisplayCurrentTime() {
+            /* JavaScript Date 객체로 현재 시간 획득 */
+            const now = new Date();
+            
+            /* 
+             * 한국어 로케일로 시간 형식화
+             * hour12: false - 24시간 형식 사용
+             * hour, minute, second: '2-digit' - 항상 2자리로 표시 (예: 09:05:03)
+             */
+            const timeString = now.toLocaleTimeString('ko-KR', {
+                hour12: false,          /* 24시간 형식 (오전/오후 없음) */
+                hour: '2-digit',        /* 시간 2자리 (09, 10, 23 등) */
+                minute: '2-digit',      /* 분 2자리 (05, 15, 30 등) */
+                second: '2-digit'       /* 초 2자리 (03, 25, 59 등) */
+            });
+            
+            /* 
+             * DOM에서 currentTime ID를 가진 요소를 찾아서
+             * 텍스트 내용을 현재 시간으로 업데이트
+             * 실시간 시간 표시의 핵심 부분
+             */
+            document.getElementById("currentTime").textContent = timeString;
+        }
+
+        /* 
+         * GetReadings() 함수
+         * 역할: ESP32 서버로부터 센서 데이터를 AJAX로 가져와서 화면에 업데이트
+         * 호출: 페이지 로드 시, 10초마다 자동, 페이지 재활성화 시
+         */
+        function GetReadings() {
+            /* 
+             * XMLHttpRequest 객체 생성
+             * 비동기 HTTP 통신을 위한 웹 표준 API
+             * fetch() API보다 오래되었지만 호환성이 더 좋음
+             */
+            const request = new XMLHttpRequest();
+            
+            /* 
+             * 타임아웃 설정 (8초)
+             * 네트워크가 느리거나 서버가 응답하지 않을 때
+             * 무한 대기를 방지하기 위한 안전장치
+             */
+            request.timeout = 8000;
+            
+            /* 
+             * 요청 상태 변경 이벤트 핸들러
+             * XMLHttpRequest의 상태가 변할 때마다 호출됨
+             * readyState: 0(초기화 안됨) → 1(연결됨) → 2(요청받음) → 3(처리중) → 4(완료)
+             */
+            request.onreadystatechange = function() {
+                /* readyState가 4(완료)일 때만 처리 */
+                if (this.readyState === 4) {
+                    /* HTTP 응답 코드가 200(성공)인 경우 */
+                    if (this.status === 200) {
+                        try {
+                            /* 
+                             * XML 응답 파싱 시도
+                             * 브라우저가 자동으로 XML을 파싱해주지만
+                             * 때때로 실패할 수 있어서 수동 파싱도 시도
+                             */
+                            let xmlDoc = this.responseXML;
+                            
+                            /* 
+                             * responseXML이 null인 경우 DOMParser로 수동 파싱
+                             * 브라우저가 Content-Type을 잘못 인식했거나
+                             * XML 파싱에 실패한 경우의 대안
+                             */
+                            if (!xmlDoc && this.responseText) {
+                                const parser = new DOMParser();
+                                xmlDoc = parser.parseFromString(this.responseText, "text/xml");
+                            }
+                            
+                            /* XML 파싱이 성공한 경우 데이터 추출 */
+                            if (xmlDoc) {
+                                /* 
+                                 * XML에서 <reading> 태그들을 모두 찾음
+                                 * ESP32가 보낸 센서 데이터들이 순서대로 들어있음
+                                 */
+                                const readings = xmlDoc.getElementsByTagName('reading');
+                                
+                                /* 
+                                 * HTML에서 class="reading"인 요소들을 모두 찾음
+                                 * 센서 데이터를 표시할 화면상의 위치들
+                                 */
+                                const readingElements = document.getElementsByClassName("reading");
+                                
+                                /* 데이터와 표시 요소가 모두 존재하는 경우만 처리 */
+                                if (readings.length > 0 && readingElements.length > 0) {
+                                    /* 
+                                     * 안전을 위해 더 적은 개수에 맞춰 처리
+                                     * XML 데이터나 HTML 요소 중 하나가 부족해도 오류 방지
+                                     */
+                                    const minLength = Math.min(readings.length, readingElements.length);
+                                    
+                                    /* 각 센서 데이터를 순서대로 화면에 업데이트 */
+                                    for (let i = 0; i < minLength; i++) {
+                                        /* XML 노드에 실제 데이터가 있는지 확인 */
+                                        if (readings[i].childNodes[0]) {
+                                            /* XML에서 센서값 추출 */
+                                            const value = readings[i].childNodes[0].nodeValue;
+                                            /* 문자열을 숫자로 변환 시도 */
+                                            const numericValue = parseFloat(value);
+                                            
+                                            /* 
+                                             * 숫자 변환이 성공한 경우 소수점 2자리로 표시
+                                             * 실패한 경우 원래 문자열 그대로 표시
+                                             */
+                                            if (!isNaN(numericValue)) {
+                                                readingElements[i].textContent = numericValue.toFixed(2);
+                                            } else {
+                                                readingElements[i].textContent = value;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            /* 
+                             * 에러 발생 시 조용히 무시
+                             * 사용자에게 에러 메시지를 보여주지 않고
+                             * 다음 업데이트 시도에서 복구되도록 함
+                             */
+                        }
+                    }
+                }
+            };
+
+            /* 
+             * HTTP GET 요청 초기화
+             * "?update_readings": ESP32에게 센서 데이터 요청임을 알리는 파라미터
+             * "&t=" + Date.now(): 캐시 방지용 타임스탬프 (매번 다른 URL로 만듦)
+             * true: 비동기 요청 (페이지가 멈추지 않음)
+             */
+            request.open("GET", "?update_readings&t=" + Date.now(), true);
+            
+            /* 
+             * 요청 전송 (GET 방식이므로 body는 null)
+             * 이 시점에서 실제로 ESP32 서버에 HTTP 요청이 보내짐
+             */
+            request.send(null);
+            
+            /* 
+             * 데이터 요청과 동시에 현재 시간도 업데이트
+             * 사용자가 최신 정보를 받은 시점을 정확히 표시
+             */
+            DisplayCurrentTime();
+        }
+
+        /* 
+         * DOM 콘텐츠 로드 완료 이벤트 리스너
+         * HTML 파싱이 완료되면 실행 (이미지 등 외부 리소스 로딩 전)
+         * $(document).ready()와 유사한 기능
+         */
+        document.addEventListener('DOMContentLoaded', function() {
+            /* 페이지 로드 즉시 현재 시간 표시 */
+            DisplayCurrentTime();
+            
+            /* 페이지 로드 즉시 첫 번째 센서 데이터 가져오기 */
+            GetReadings();
+            
+            /* 
+             * 10초(10000ms)마다 자동으로 센서 데이터 업데이트
+             * setInterval로 주기적 실행 설정
+             * 실시간 모니터링의 핵심 기능
+             */
+            setInterval(GetReadings, 10000);
+            
+            /* 
+             * 1초(1000ms)마다 시간 표시 업데이트
+             * 센서 데이터와 별도로 시간은 더 자주 업데이트
+             * 실시간성을 높이는 사용자 경험 개선
+             */
+            setInterval(DisplayCurrentTime, 1000);
+        });
+        
+        /* 
+         * 페이지 가시성 변경 이벤트 리스너
+         * 사용자가 다른 탭으로 이동했다가 돌아올 때 감지
+         * 브라우저 최적화로 백그라운드에서는 타이머가 느려질 수 있음
+         */
+        document.addEventListener('visibilitychange', function() {
+            /* 
+             * 페이지가 다시 보이게 되었을 때 (사용자가 탭으로 돌아옴)
+             * 즉시 최신 데이터를 가져와서 화면 업데이트
+             * 사용자가 탭을 전환하는 동안 놓친 업데이트를 보상
+             */
+            if (!document.hidden) {
+                GetReadings();
+            }
+        });
+    </script>
+</body>
+</html>
